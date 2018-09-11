@@ -6,7 +6,7 @@ app = Chalice(app_name='hujjatytproxy')
 CACHE = TTLCache(maxsize=10, ttl=60)
 
 
-@app.route('/youtube/v3/search')
+@app.route('/v3/search')
 def youtube():
     channel = app.current_request.query_params.get("channelId")
     result = CACHE.get(channel)
