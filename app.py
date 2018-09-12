@@ -1,3 +1,4 @@
+import os
 from chalice import Chalice, Response
 from cachetools import TTLCache
 import requests
@@ -12,6 +13,9 @@ def youtube():
     result = CACHE.get(channel)
     if not CACHE.get(channel):
         try:
+            params = app.current_request.query_params
+            if not params.get("key"):
+                params["key"] = os.environ["YOUTUBE_API_KEY"]
             r = requests.get("https://www.googleapis.com/youtube/v3/search", params=app.current_request.query_params)
             if r.status_code == requests.codes.ok:
                 result = r.json()
