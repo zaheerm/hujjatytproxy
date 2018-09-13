@@ -1,0 +1,50 @@
+<html>
+<head>
+<script src="jquery.min.js"></script>
+<script>
+jQuery("document").ready(function() {
+    
+});
+function is_any_stream_online() {
+    var params = {};
+    url = "http://127.0.0.1:8000/live/";
+    jQuery.getJSON(url, function(data) {
+        console.log(data);
+        if (data["any_live"]) {
+            jQuery("live-streams-parent-container_id").show();
+        }
+        else {
+            jQuery("live-streams-parent-container-id").show();
+        }
+    }).fail(function() { console.log("failure"); });
+}
+is_any_stream_online();
+</script>
+</head>
+<body>
+        <div id="live-streams-parent-container_id" class="live-streams-parent-container">
+                <table>
+                <tbody>
+                <tr>
+                <td class="live-stream-title">Main Hall</td>
+                <td class="live-stream-title">ELC</td>
+                <td class="live-stream-title">Ladies</td>
+                </tr>
+                <tr>
+                <td class="live-stream">
+                <div class="live-stream-wrapper-mainhall">Offline</div></td>
+                <td class="live-stream">
+                <div class="live-stream-wrapper-elc">Offline</div></td>
+                <td class="live-stream">
+                <div class="live-stream-wrapper-ladies">Offline</div></td>
+                </tr>
+                <tr>
+                <td class="live-stream-link"><a href="http://hujj.at/urdu?utm_source=Mainhall">YouTube</a></td>
+                <td class="live-stream-link"><a href="http://hujj.at/elc?utm_source=ELC">YouTube</a></td>
+                <td class="live-stream-link"><a href="https://hujj.at/elcladies?utm_source=Ladies">YouTube</a></td>
+                </tr>
+                </tbody>
+                </table>
+                </div>
+</body>
+</html>
