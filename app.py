@@ -5,7 +5,7 @@ from cachetools import TTLCache
 import requests
 
 app = Chalice(app_name='hujjatytproxy')
-CACHE = TTLCache(maxsize=10, ttl=60)
+CACHE = TTLCache(maxsize=10, ttl=120)
 CHANNELS = {
     "mainhall": "UCSSgKFdC-gRtxIgTrGGqP3g",
     "elc": "UCvjUFF1C3yO2KK17EjpiWGQ",
