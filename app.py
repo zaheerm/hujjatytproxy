@@ -10,7 +10,7 @@ import requests
 app = Chalice(app_name='hujjatytproxy')
 CACHE = TTLCache(maxsize=10, ttl=30)
 DYNAMODB_IF_STREAM_TTL = 600
-DYNAMODB_IF_NO_STREAM_TTL = 60
+DYNAMODB_IF_NO_STREAM_TTL = 100
 BEFORE_GOING_OFFLINE = 600
 
 CHANNELS = {
@@ -49,7 +49,6 @@ class RealYoutubeDynamodb:
             if 'TABLE' in os.environ:
                 result = client.put_item(
                     Item={'channel': { 'S': channel}, 'time': {'N': str(time.time())}, 'result': {'S': json.dumps(result)}}, TableName=os.environ['TABLE'])
-                print(result)
         except Exception as exc:
             print("Exception writing to dynamodb: %s" % (exc,))
             traceback.print_exc()
@@ -58,6 +57,7 @@ class RealYoutubeDynamodb:
     @classmethod
     def request_from_youtube(cls, params):
         r = requests.get("https://www.googleapis.com/youtube/v3/search", params=params)
+        print("Youtube API Request for %s" % (params.get("channelId")))
         try:
             result = r.json()
         except:
@@ -145,4 +145,9 @@ def any_live():
 
 @app.route('/ping', cors=True)
 def ping():
+    if False:
+        client = boto3.client('dynamodb')
+        result = client.get_item(Key={'channel': { 'S': 'mainhall'}}, TableName=os.environ['TABLE'])
+        client.put_item(
+                    Item={'channel': { 'S': 'mainhall'}, 'time': {'N': str(time.time())}, 'result': {'S': json.dumps(result['Item'])}}, TableName=os.environ['TABLE'])
     return Response(body=json.dumps({}), status_code=200)
