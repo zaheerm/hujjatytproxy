@@ -94,22 +94,27 @@ def do_search_on_youtube(params, youtube_and_dynamodb=RealYoutubeDynamodb):
         except Exception as exc:
             print("Exception decoding from dynamodb: %s" % (exc,))
             traceback.print_exc()
-        try:
-            if not params.get("key"):
-                params["key"] = os.environ.get("YOUTUBE_API_KEY")
-            status_code, result = youtube_and_dynamodb.request_from_youtube(params)
-            if status_code == requests.codes.ok:
-                if are_there_videos(decoded_dresult) and not are_there_videos(result) and time.time() - create_time < BEFORE_GOING_OFFLINE:
-                    return 200, decoded_dresult, 'dynamodb'
-                CACHE[channel] = result
-                youtube_and_dynamodb.write_to_dynamodb(channel, result)
-            else:
-                if decoded_dresult:
-                    return 200, decoded_dresult, 'dynamodb'
-            return status_code, result, 'youtube'
-        except Exception as exc:
-            print(exc)
-            return 500, {}, 'youtube'
+        return request_from_youtube_and_write_to_cache(params, decoded_dresult, youtube_and_dynamodb)
+
+
+def request_from_youtube_and_write_to_cache(params, decoded_dresult=None, youtube_and_dynamodb=RealYoutubeDynamodb):
+    channel = params.get("channelId")
+    try:
+        if not params.get("key"):
+            params["key"] = os.environ.get("YOUTUBE_API_KEY")
+        status_code, result = youtube_and_dynamodb.request_from_youtube(params)
+        if status_code == requests.codes.ok:
+            if are_there_videos(decoded_dresult) and not are_there_videos(result) and time.time() - create_time < BEFORE_GOING_OFFLINE:
+                return 200, decoded_dresult, 'dynamodb'
+            CACHE[channel] = result
+            youtube_and_dynamodb.write_to_dynamodb(channel, result)
+        else:
+            if decoded_dresult:
+                return 200, decoded_dresult, 'dynamodb'
+        return status_code, result, 'youtube'
+    except Exception as exc:
+        print(exc)
+        return 500, {}, 'youtube'
 
 
 @app.route('/v3/search', cors=True)
@@ -126,20 +131,32 @@ def youtube():
 
 @app.route('/live', cors=True)
 def any_live():
+    return live(skip_cache=False)
+
+@app.route('/refresh', cors=True)
+def refresh_cache():
+    return live(skip_cache=True)
+
+
+def live(skip_cache=False):
     results = {}
     any_live = False
     for channel, id in CHANNELS.items():
         params = {}
         params.update(DEFAULT_PARAMS)
         params["channelId"] = id
-        status_code, result, how = do_search_on_youtube(params)
+        if skip_cache:
+            status_code, result, how = request_from_youtube_and_write_to_cache(params)
+        else:
+            status_code, result, how = do_search_on_youtube(params)
         print("Retrieved %s from %s with status_code %d" % (channel, how, status_code))
         if status_code == requests.codes.ok:
             if len(result.get("items", [])) > 0:
                 any_live = True
         results[channel] = {
             "status_code": status_code,
-            "result": result}
+            "result": result,
+            "how": how}
     results["any_live"] = any_live
     return results
 
