@@ -6,11 +6,11 @@ from cachetools import TTLCache
 import requests
 import unittest
 import os
-import mock
+from unittest import mock
 
 CACHE = TTLCache(maxsize=10, ttl=30)
 DYNAMODB_IF_STREAM_TTL = 600
-DYNAMODB_IF_NO_STREAM_TTL = 60
+DYNAMODB_IF_NO_STREAM_TTL = 100
 BEFORE_GOING_OFFLINE = 600
 
 CHANNELS = {
