@@ -63,6 +63,7 @@ class RealYoutubeDynamodb:
             result = r.json()
         except:
             result = r.text
+        print(f"Youtube API Response code: {r.status_code} for {params.get('channelId')} with key origin {key_origin}")
         return r.status_code, result
 
 
