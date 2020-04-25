@@ -119,7 +119,7 @@ def request_from_youtube_and_write_to_cache(params, decoded_dresult=None, create
         status_code, result = youtube_and_dynamodb.request_from_youtube(params, key_origin)
         if status_code == requests.codes.ok:
             if are_there_videos(decoded_dresult) and not are_there_videos(result) and time.time() - create_time < BEFORE_GOING_OFFLINE:
-                return 200, decoded_dresult, 'dynamodb'
+                return 200, decoded_dresult, 'dynamodb', None, None
             CACHE[channel] = result
             youtube_and_dynamodb.write_to_dynamodb(channel, result)
         else:
