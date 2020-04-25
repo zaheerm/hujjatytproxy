@@ -2,6 +2,7 @@ import json
 import os
 import time
 import traceback
+import random
 import boto3
 from chalice import Chalice, Response
 from cachetools import TTLCache
@@ -55,9 +56,9 @@ class RealYoutubeDynamodb:
         return None
 
     @classmethod
-    def request_from_youtube(cls, params):
+    def request_from_youtube(cls, params, key_origin):
         r = requests.get("https://www.googleapis.com/youtube/v3/search", params=params)
-        print("Youtube API Request for %s" % (params.get("channelId")))
+        print(f"Youtube API Request for {params.get('channelId')} with key origin {key_origin}")
         try:
             result = r.json()
         except:
@@ -75,7 +76,7 @@ def do_search_on_youtube(params, youtube_and_dynamodb=RealYoutubeDynamodb):
     channel = params.get("channelId")
     result = CACHE.get(channel)
     if result:
-        return 200, result, 'cache'
+        return 200, result, 'cache', None, None
     else:
         dresult = None
         decoded_dresult = None
@@ -90,19 +91,32 @@ def do_search_on_youtube(params, youtube_and_dynamodb=RealYoutubeDynamodb):
                     decoded_dresult = json.loads(dresult)
                     ttl = DYNAMODB_IF_STREAM_TTL if are_there_videos(decoded_dresult) else DYNAMODB_IF_NO_STREAM_TTL
                     if time.time() - create_time < ttl:
-                        return 200, decoded_dresult, 'dynamodb'
+                        return 200, decoded_dresult, 'dynamodb', None, None
         except Exception as exc:
             print("Exception decoding from dynamodb: %s" % (exc,))
             traceback.print_exc()
-        return request_from_youtube_and_write_to_cache(params, decoded_dresult, youtube_and_dynamodb)
+        return request_from_youtube_and_write_to_cache(params, decoded_dresult, create_time, youtube_and_dynamodb)
 
 
-def request_from_youtube_and_write_to_cache(params, decoded_dresult=None, youtube_and_dynamodb=RealYoutubeDynamodb):
+def pick_youtube_api_key():
+    keys = os.environ.get("YOUTUBE_API_KEYS")
+    all_keys = []
+    for key in keys.split(','):
+        origin, value = key.split(':')
+        all_keys.append((origin, value))
+    choice = random.choice(all_keys)
+    return choice
+
+
+def request_from_youtube_and_write_to_cache(params, decoded_dresult=None, create_time=0, youtube_and_dynamodb=RealYoutubeDynamodb):
     channel = params.get("channelId")
     try:
+        key_origin = None
         if not params.get("key"):
-            params["key"] = os.environ.get("YOUTUBE_API_KEY")
-        status_code, result = youtube_and_dynamodb.request_from_youtube(params)
+            key_origin, params["key"] = pick_youtube_api_key()
+        else:
+            key_origin = "provided_in_apicall"
+        status_code, result = youtube_and_dynamodb.request_from_youtube(params, key_origin)
         if status_code == requests.codes.ok:
             if are_there_videos(decoded_dresult) and not are_there_videos(result) and time.time() - create_time < BEFORE_GOING_OFFLINE:
                 return 200, decoded_dresult, 'dynamodb'
@@ -110,11 +124,11 @@ def request_from_youtube_and_write_to_cache(params, decoded_dresult=None, youtub
             youtube_and_dynamodb.write_to_dynamodb(channel, result)
         else:
             if decoded_dresult:
-                return 200, decoded_dresult, 'dynamodb'
-        return status_code, result, 'youtube'
+                return 200, decoded_dresult, 'dynamodb', f"youtube status {status_code} with data {result}", key_origin
+        return status_code, result, 'youtube', f"youtube status {status_code}", key_origin
     except Exception as exc:
         print(exc)
-        return 500, {}, 'youtube'
+        return 500, {}, 'youtube', f"error {exc}", key_origin
 
 
 @app.route('/v3/search', cors=True)
@@ -146,17 +160,19 @@ def live(skip_cache=False):
         params.update(DEFAULT_PARAMS)
         params["channelId"] = id
         if skip_cache:
-            status_code, result, how = request_from_youtube_and_write_to_cache(params)
+            status_code, result, how, info, key_origin = request_from_youtube_and_write_to_cache(params)
         else:
-            status_code, result, how = do_search_on_youtube(params)
-        print("Retrieved %s from %s with status_code %d" % (channel, how, status_code))
+            status_code, result, how, info, key_origin = do_search_on_youtube(params)
+        print(f"Retrieved {channel} from {how} with status_code {status_code} with info: {info} and key origin: {key_origin}")
         if status_code == requests.codes.ok:
             if len(result.get("items", [])) > 0:
                 any_live = True
         results[channel] = {
             "status_code": status_code,
             "result": result,
-            "how": how}
+            "how": how,
+            "extra_info": info,
+            "key_origin": key_origin}
     results["any_live"] = any_live
     return results
 
