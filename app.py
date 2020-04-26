@@ -16,9 +16,10 @@ BEFORE_GOING_OFFLINE = 600
 MIN_TIME_BEFORE_UPSTREAM_CHECKS = 100
 
 CHANNELS = {
-    "mainhall": "UCSSgKFdC-gRtxIgTrGGqP3g",
+    # "mainhall": "UCSSgKFdC-gRtxIgTrGGqP3g",
     "elc": "UCvjUFF1C3yO2KK17EjpiWGQ",
-    "ladies": "UCPOs_KwzIUfBq5sNR8IJynw"}
+    # "ladies": "UCPOs_KwzIUfBq5sNR8IJynw"
+}
 DEFAULT_PARAMS = {
     "order": "date",
     "maxResults": "1",
