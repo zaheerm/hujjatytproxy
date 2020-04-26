@@ -14,6 +14,7 @@ DYNAMODB_IF_STREAM_TTL = 600
 DYNAMODB_IF_NO_STREAM_TTL = 100
 BEFORE_GOING_OFFLINE = 600
 MIN_TIME_BEFORE_UPSTREAM_CHECKS = 100
+GRACE_PERIOD = random.choice(range(100)) # this is to not have every lambda node go and query at the same time
 
 CHANNELS = {
     # "mainhall": "UCSSgKFdC-gRtxIgTrGGqP3g",
@@ -135,7 +136,7 @@ def request_from_youtube_and_write_to_cache(params, decoded_dresult=None, create
         else:
             key_origin = "provided_in_apicall"
         since_last_check = time.time() - int(float(last_checked_time))
-        if since_last_check > MIN_TIME_BEFORE_UPSTREAM_CHECKS:
+        if since_last_check > MIN_TIME_BEFORE_UPSTREAM_CHECKS + GRACE_PERIOD:
             print(f"Going to youtube to check because last check was done {since_last_check} ago")
             status_code, result = youtube_and_dynamodb.request_from_youtube(params, key_origin)
             if status_code == requests.codes.ok:
