@@ -10,9 +10,9 @@ import requests
 
 app = Chalice(app_name='hujjatytproxy')
 CACHE = TTLCache(maxsize=10, ttl=30)
-DYNAMODB_IF_STREAM_TTL = 600
+DYNAMODB_IF_STREAM_TTL = 300
 DYNAMODB_IF_NO_STREAM_TTL = 100
-BEFORE_GOING_OFFLINE = 600
+BEFORE_GOING_OFFLINE = 300
 MIN_TIME_BEFORE_UPSTREAM_CHECKS = 100
 GRACE_PERIOD = random.choice(range(100)) # this is to not have every lambda node go and query at the same time
 
