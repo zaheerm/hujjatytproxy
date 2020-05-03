@@ -14,7 +14,8 @@ DYNAMODB_IF_STREAM_TTL = 300
 DYNAMODB_IF_NO_STREAM_TTL = 100
 BEFORE_GOING_OFFLINE = 300
 MIN_TIME_BEFORE_UPSTREAM_CHECKS = 100
-GRACE_PERIOD = random.choice(range(100))  # this is to not have every lambda node go and query at the same time
+MAX_GRACE_PERIOD = 100
+GRACE_PERIOD = random.choice(range(MAX_GRACE_PERIOD))  # this is to not have every lambda node go and query at the same time
 
 CHANNELS = {
     # "mainhall": "UCSSgKFdC-gRtxIgTrGGqP3g",
@@ -30,6 +31,15 @@ DEFAULT_PARAMS = {
     "videoEmbeddable": "true",
     "part": "snippet"
 }
+
+
+def reset_cache():
+    global CACHE
+    CACHE = TTLCache(maxsize=10, ttl=30)
+
+
+def get_cache():
+    return CACHE
 
 
 class RealYoutubeDynamodb:
@@ -120,7 +130,9 @@ def do_search_on_youtube(params, youtube_and_dynamodb=RealYoutubeDynamodb):
                     create_time = int(float(create_time))
                     decoded_dresult = json.loads(dresult)
                     ttl = DYNAMODB_IF_STREAM_TTL if are_there_videos(decoded_dresult) else DYNAMODB_IF_NO_STREAM_TTL
-                    if time.time() - create_time < ttl:
+                    now = time.time()
+                    if now - create_time < ttl:
+                        print(f"Using Dynamodb result as within ttl: now={now} create_time={create_time} ttl={ttl}")
                         return 200, decoded_dresult, 'dynamodb', None, None
         except Exception as exc:
             print("Exception decoding from dynamodb: %s" % (exc,))
@@ -130,7 +142,7 @@ def do_search_on_youtube(params, youtube_and_dynamodb=RealYoutubeDynamodb):
 
 
 def pick_youtube_api_key():
-    keys = os.environ.get("YOUTUBE_API_KEYS")
+    keys = os.environ.get("YOUTUBE_API_KEYS", 'test_key:blah')
     all_keys = []
     for key in keys.split(','):
         origin, value = key.split(':')
@@ -155,14 +167,17 @@ def request_from_youtube_and_write_to_cache(params, decoded_dresult=None, create
             if status_code == requests.codes.ok:
                 if (are_there_videos(decoded_dresult) and not are_there_videos(result) and
                         time.time() - create_time < BEFORE_GOING_OFFLINE):
+                    print(f"Still using dynamodb result because youtube had no videos")
                     youtube_and_dynamodb.update_dynamodb(channel, decoded_dresult, create_time)
                     return (
                         200, decoded_dresult, 'dynamodb',
                         f"youtube status {status_code} with data {result}", key_origin)
+                print(f"Caching result for {channel} from youtube")
                 CACHE[channel] = result
                 youtube_and_dynamodb.write_to_dynamodb(channel, result)
                 return status_code, result, 'youtube', f"youtube status {status_code}", key_origin
             else:
+                print(f"Youtube returned {status_code}")
                 if decoded_dresult:
                     youtube_and_dynamodb.update_dynamodb(channel, decoded_dresult, create_time)
                     return (
@@ -171,6 +186,7 @@ def request_from_youtube_and_write_to_cache(params, decoded_dresult=None, create
                 else:
                     return 500, {}, 'youtube', f"youtube status {status_code} with data {result}", key_origin
         else:
+            print(f"Using dynamodb because last check was done {since_last_check} ago")
             if decoded_dresult:
                 return 200, decoded_dresult, 'dynamodb', None, None
     except Exception as exc:
