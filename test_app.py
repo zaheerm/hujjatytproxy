@@ -3,8 +3,6 @@ import time
 import copy
 from unittest import mock
 import pytest
-from chalice import Chalice
-from app import app as chalice_app
 from app import do_search_on_youtube, DYNAMODB_IF_STREAM_TTL, MIN_TIME_BEFORE_UPSTREAM_CHECKS
 from app import CHANNELS, DEFAULT_PARAMS, MAX_GRACE_PERIOD, reset_cache, get_cache
 from app import DYNAMODB_IF_NO_STREAM_TTL
@@ -80,11 +78,11 @@ class FakeYoutubeDynamodb:
     @classmethod
     def get_from_dynamodb(cls, channel):
         return None
-    
+
     @classmethod
     def write_to_dynamodb(cls, channel, result):
         return None
-    
+
     @classmethod
     def update_dynamodb(cls, channel, result, create_time):
         return None
@@ -149,5 +147,5 @@ def test_from_dynamodb_before_if_no_stream_ttl(search_params):
             'result': {'S': json.dumps(FakeYoutubeDynamodb.request_from_youtube_offline(1, None)[1])},
             'time': {'N': str(time.time() - DYNAMODB_IF_STREAM_TTL + 1)},
             'last_checked_time': {'N': str(time.time() - MIN_TIME_BEFORE_UPSTREAM_CHECKS + 1)}}
-        status, _, where, _, _= do_search_on_youtube(search_params, FakeYoutubeDynamodb)
+        status, _, where, _, _ = do_search_on_youtube(search_params, FakeYoutubeDynamodb)
         assert where == 'dynamodb'
