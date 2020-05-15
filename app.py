@@ -13,10 +13,10 @@ from durations.exceptions import ScaleFormatError, InvalidTokenError
 
 app = Chalice(app_name='hujjatytproxy')
 CACHE = TTLCache(maxsize=10, ttl=30)
-DYNAMODB_IF_STREAM_TTL = 300
-DYNAMODB_IF_NO_STREAM_TTL = 100
-BEFORE_GOING_OFFLINE = 300
-MIN_TIME_BEFORE_UPSTREAM_CHECKS = 100
+DYNAMODB_IF_STREAM_TTL = 900
+DYNAMODB_IF_NO_STREAM_TTL = 200
+BEFORE_GOING_OFFLINE = 900
+MIN_TIME_BEFORE_UPSTREAM_CHECKS = 200
 MAX_GRACE_PERIOD = 100
 GRACE_PERIOD = random.choice(range(MAX_GRACE_PERIOD))  # this is to for all nodes to not go and query at the same time
 
@@ -215,52 +215,65 @@ def request_from_youtube_and_write_to_cache(params, decoded_dresult=None, create
 
 def force_video_id(video_id, channel, ttl, youtube_and_dynamodb=RealYoutubeDynamodb):
     channel_id = CHANNELS[channel]
-    result = json.loads("""
+    if video_id:
+        result = json.loads("""
+        {
+            "kind": "youtube#searchListResponse",
+            "etag": "8jEFfXBrqiSrcF6Ee7MQuz8XuAM/IzvFVgDabZ_mOGJl5FfbgvJqoL4",
+            "regionCode": "IE",
+            "pageInfo": {
+                "totalResults": 1,
+                "resultsPerPage": 1
+            },
+            "items": [
+                {
+                "kind": "youtube#searchResult",
+                "etag": "8jEFfXBrqiSrcF6Ee7MQuz8XuAM/fu3EinHUWmS-3Hb0Csc8-lKjhpk",
+                "id": {
+                    "kind": "youtube#video",
+                    "videoId": "KTf2_GL_6lA"
+                },
+                "snippet": {
+                    "publishedAt": "2019-09-06T21:35:13.000Z",
+                    "channelId": "UCSSgKFdC-gRtxIgTrGGqP3g",
+                    "title": "The KSIMC of London - Stanmore - Main Hall Live Stream",
+                    "description": "",
+                    "thumbnails": {
+                    "default": {
+                        "url": "https://i.ytimg.com/vi/KTf2_GL_6lA/default_live.jpg",
+                        "width": 120,
+                        "height": 90
+                    },
+                    "medium": {
+                        "url": "https://i.ytimg.com/vi/KTf2_GL_6lA/mqdefault_live.jpg",
+                        "width": 320,
+                        "height": 180
+                    },
+                    "high": {
+                        "url": "https://i.ytimg.com/vi/KTf2_GL_6lA/hqdefault_live.jpg",
+                        "width": 480,
+                        "height": 360
+                    }
+                    },
+                    "channelTitle": "The KSIMC of London - Stanmore - Main Hall",
+                    "liveBroadcastContent": "live"
+                }
+                }
+            ]
+            }""")
+        result["items"][0]["id"]["videoId"] = video_id
+    else:
+        result = """
     {
         "kind": "youtube#searchListResponse",
-        "etag": "8jEFfXBrqiSrcF6Ee7MQuz8XuAM/IzvFVgDabZ_mOGJl5FfbgvJqoL4",
+        "etag": "8jEFfXBrqiSrcF6Ee7MQuz8XuAM/nxmhARCBNQQrPOpwtM0UNWBXCsg",
         "regionCode": "IE",
         "pageInfo": {
-            "totalResults": 1,
+            "totalResults": 0,
             "resultsPerPage": 1
         },
-        "items": [
-            {
-            "kind": "youtube#searchResult",
-            "etag": "8jEFfXBrqiSrcF6Ee7MQuz8XuAM/fu3EinHUWmS-3Hb0Csc8-lKjhpk",
-            "id": {
-                "kind": "youtube#video",
-                "videoId": "KTf2_GL_6lA"
-            },
-            "snippet": {
-                "publishedAt": "2019-09-06T21:35:13.000Z",
-                "channelId": "UCSSgKFdC-gRtxIgTrGGqP3g",
-                "title": "The KSIMC of London - Stanmore - Main Hall Live Stream",
-                "description": "",
-                "thumbnails": {
-                "default": {
-                    "url": "https://i.ytimg.com/vi/KTf2_GL_6lA/default_live.jpg",
-                    "width": 120,
-                    "height": 90
-                },
-                "medium": {
-                    "url": "https://i.ytimg.com/vi/KTf2_GL_6lA/mqdefault_live.jpg",
-                    "width": 320,
-                    "height": 180
-                },
-                "high": {
-                    "url": "https://i.ytimg.com/vi/KTf2_GL_6lA/hqdefault_live.jpg",
-                    "width": 480,
-                    "height": 360
-                }
-                },
-                "channelTitle": "The KSIMC of London - Stanmore - Main Hall",
-                "liveBroadcastContent": "live"
-            }
-            }
-        ]
-        }""")
-    result["items"][0]["id"]["videoId"] = video_id
+        "items": []
+        }"""
     youtube_and_dynamodb.write_to_dynamodb(channel_id, result, time.time() + ttl)
 
 
