@@ -13,10 +13,10 @@ from durations.exceptions import ScaleFormatError, InvalidTokenError
 
 app = Chalice(app_name='hujjatytproxy')
 CACHE = TTLCache(maxsize=10, ttl=30)
-DYNAMODB_IF_STREAM_TTL = 300
-DYNAMODB_IF_NO_STREAM_TTL = 100
-BEFORE_GOING_OFFLINE = 300
-MIN_TIME_BEFORE_UPSTREAM_CHECKS = 100
+DYNAMODB_IF_STREAM_TTL = 900
+DYNAMODB_IF_NO_STREAM_TTL = 200
+BEFORE_GOING_OFFLINE = 900
+MIN_TIME_BEFORE_UPSTREAM_CHECKS = 200
 MAX_GRACE_PERIOD = 100
 GRACE_PERIOD = random.choice(range(MAX_GRACE_PERIOD))  # this is to for all nodes to not go and query at the same time
 
