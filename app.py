@@ -263,7 +263,7 @@ def force_video_id(video_id, channel, ttl, youtube_and_dynamodb=RealYoutubeDynam
             }""")
         result["items"][0]["id"]["videoId"] = video_id
     else:
-        result = """
+        result = json.loads("""
     {
         "kind": "youtube#searchListResponse",
         "etag": "8jEFfXBrqiSrcF6Ee7MQuz8XuAM/nxmhARCBNQQrPOpwtM0UNWBXCsg",
@@ -273,7 +273,7 @@ def force_video_id(video_id, channel, ttl, youtube_and_dynamodb=RealYoutubeDynam
             "resultsPerPage": 1
         },
         "items": []
-        }"""
+        }""")
     youtube_and_dynamodb.write_to_dynamodb(channel_id, result, time.time() + ttl)
 
 
@@ -321,7 +321,8 @@ def live(skip_cache=False):
             "result": result,
             "how": how,
             "extra_info": info,
-            "key_origin": key_origin}
+            "key_origin": key_origin,
+            "upstream": 'youtube'}
     results["any_live"] = any_live
     return results
 
@@ -342,7 +343,7 @@ def ping():
 
 @app.route('/forcevideo', cors=True)
 def force_video():
-    video_id = app.current_request.query_params.get('videoId')
+    video_id = app.current_request.query_params.get('videoId', '')
     channel = app.current_request.query_params.get('channel')
     ttl = app.current_request.query_params.get('ttl')
     try:
@@ -351,7 +352,4 @@ def force_video():
         return Response(body=json.dumps({}), status_code=400)
     if channel not in CHANNELS:
         return Response(body=json.dumps({}), status_code=400)
-    if video_id:
-        return force_video_id(video_id, channel, duration)
-    else:
-        return Response(body=json.dumps({}), status_code=400)
+    return force_video_id(video_id, channel, duration)

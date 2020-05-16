@@ -182,5 +182,15 @@ def test_force_video_id_writes_to_dynamodb(search_params):
     with mock.patch.object(FakeYoutubeDynamodb, 'write_to_dynamodb') as write_to_dynamodb_mock:
         force_video_id('ABCD', list(CHANNELS.keys())[0], 3600, youtube_and_dynamodb=FakeYoutubeDynamodb)
         assert write_to_dynamodb_mock.called
-        assert write_to_dynamodb_mock.call_args.args[0] == list(CHANNELS.values())[0]
-        assert abs(int(write_to_dynamodb_mock.call_args.args[2] - time.time()) - 3600) <= 1
+        assert write_to_dynamodb_mock.call_args[0][0] == list(CHANNELS.values())[0]
+        assert write_to_dynamodb_mock.call_args[0][1]["items"][0]["id"]["videoId"]
+        assert abs(int(write_to_dynamodb_mock.call_args[0][2] - time.time()) - 3600) <= 1
+
+
+def test_empty_force_video_id_writes_to_dynamodb(search_params):
+    with mock.patch.object(FakeYoutubeDynamodb, 'write_to_dynamodb') as write_to_dynamodb_mock:
+        force_video_id('', list(CHANNELS.keys())[0], 3600, youtube_and_dynamodb=FakeYoutubeDynamodb)
+        assert write_to_dynamodb_mock.called
+        assert write_to_dynamodb_mock.call_args[0][0] == list(CHANNELS.values())[0]
+        assert write_to_dynamodb_mock.call_args[0][1]["items"] == []
+        assert abs(int(write_to_dynamodb_mock.call_args[0][2] - time.time()) - 3600) <= 1
