@@ -321,7 +321,8 @@ def live(skip_cache=False):
             "result": result,
             "how": how,
             "extra_info": info,
-            "key_origin": key_origin}
+            "key_origin": key_origin,
+            "upstream": 'youtube'}
     results["any_live"] = any_live
     return results
 
