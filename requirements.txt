@@ -1,5 +1,5 @@
 cachetools==4.1.0
-requests==2.23.0
+requests==2.31.0
 boto3==1.13.1
 chalice==1.14.0
 durations==0.3.3
